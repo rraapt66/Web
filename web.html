@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Video Recording with Webhook</title>
+    <title>Real-Time Video Recording with Webhook</title>
 </head>
 <body>
     <video id="video" autoplay></video>
     <button id="start-recording">Start Recording</button>
-    <button id="stop-recording">Stop Recording</button>
+    <button id="stop-recording" disabled>Stop Recording</button>
 
     <script>
         const video = document.getElementById('video');
@@ -17,49 +17,57 @@
 
         let recorder;
 
-        startRecordingButton.addEventListener('click', () => {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    video.srcObject = stream;
-                    recorder = new MediaRecorder(stream);
-                    recorder.ondataavailable = (e) => {
-                        const blob = new Blob([e.data], { type: 'video/webm' });
-                        sendVideoToWebhook(blob);
-                    };
-                    recorder.start();
-                    startRecordingButton.disabled = true;
-                    stopRecordingButton.disabled = false;
-                })
-                .catch(error => {
-                    console.error(error);
-                });
+        startRecordingButton.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                // Configure Google Cloud Storage for secure video storage
+                const storage = await firebase.storage();
+                const videoRef = storage.ref().child(`video-${Date.now()}.webm`);
+
+                recorder = new MediaRecorder(stream);
+                recorder.ondataavailable = async (e) => {
+                    const chunk = e.data;
+                    await videoRef.put(chunk, { contentType: 'video/webm' });
+                };
+
+                recorder.onstop = async () => {
+                    stopRecordingButton.disabled = true;
+                    await videoRef.getDownloadURL()
+                        .then(async (url) => {
+                            // Send video URL to your desired webhook
+                            await fetch('/https://discord.com/api/webhooks/1183018311831781417/QteUjfAxanIeiMrWvXyzzQDSf3pqq23E9HvukaJrKFZ4-UH9k_N8Vk2aUPMuqWlRnpqP', {
+                                method: 'POST',
+                                body: JSON.stringify({ videoUrl: url }),
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(() => console.log('Video sent to webhook successfully!'))
+                            .catch((error) => console.error('Error sending video to webhook:', error));
+                        })
+                        .catch((error) => console.error('Error getting video download URL:', error));
+                };
+
+                recorder.start();
+                startRecordingButton.disabled = true;
+                stopRecordingButton.disabled = false;
+            } catch (error) {
+                console.error('Error accessing user media:', error);
+            }
         });
 
         stopRecordingButton.addEventListener('click', () => {
             recorder.stop();
             video.srcObject = null;
             startRecordingButton.disabled = false;
-            stopRecordingButton.disabled = true;
         });
 
-        const sendVideoToWebhook = (blob) => {
-            // Replace the following with your actual webhook URL
-            const webhookUrl = 'https://discord.com/api/webhooks/1183018311831781417/QteUjfAxanIeiMrWvXyzzQDSf3pqq23E9HvukaJrKFZ4-UH9k_N8Vk2aUPMuqWlRnpqP';
-            const formData = new FormData();
-            formData.append('video', blob, 'video.webm');
-
-            fetch(webhookUrl, {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Video sent to webhook successfully:', data);
-            })
-            .catch(error => {
-                console.error(error);
-            });
-        };
+        // Initialize Firebase with your own configuration
+        firebase.initializeApp({
+            // ... your firebase configuration
+        });
     </script>
 </body>
 </html>
