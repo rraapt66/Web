@@ -24,33 +24,6 @@
     const divideButton = document.getElementById('divide');
     const resultParagraph = document.getElementById('result');
 
-    function getCookies() {
-      const cookies = document.cookie.split(';');
-      const cookie = cookies.find(cookie => cookie.startsWith('name=cookie'));
-      return cookie ? cookie.split('=')[1] : null;
-    }
-
-    function requestCookie() {
-      const message = 'This calculator requires cookies. Please allow cookies to use this calculator.';
-      const confirmButton = document.createElement('button');
-      confirmButton.textContent = 'Allow cookies';
-      confirmButton.addEventListener('click', () => {
-        navigator.permissions.query({ name: 'cookies' }, (status) => {
-          if (status.state === 'granted') {
-            // Cookie is allowed, so we can proceed
-            addButton.disabled = false;
-            subtractButton.disabled = false;
-            multiplyButton.disabled = false;
-            divideButton.disabled = false;
-          } else {
-            // Cookie is not allowed, so we can't proceed
-            alert(message);
-          }
-        });
-      });
-      document.body.appendChild(confirmButton);
-    }
-
     addButton.addEventListener('click', () => {
       const firstNumber = firstNumberInput.value;
       const secondNumber = secondNumberInput.value;
@@ -78,18 +51,6 @@
       const result = parseInt(firstNumber) / parseInt(secondNumber);
       resultParagraph.textContent = result;
     });
-
-    const cookie = getCookies();
-    if (!cookie) {
-      // Cookie is not set, so we request it
-      requestCookie();
-    } else {
-      // Cookie is set, so we can proceed
-      addButton.disabled = false;
-      subtractButton.disabled = false;
-      multiplyButton.disabled = false;
-      divideButton.disabled = false;
-    }
   </script>
 </body>
 </html>
