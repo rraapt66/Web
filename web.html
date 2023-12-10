@@ -1,65 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Video Recording with Webhook</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator</title>
 </head>
 <body>
-    <video id="video" autoplay></video>
-    <button id="start-recording">Start Recording</button>
-    <button id="stop-recording">Stop Recording</button>
+  <h1>Calculator</h1>
+  <input type="number" id="first-number">
+  <input type="number" id="second-number">
+  <button id="add">Add</button>
+  <button id="subtract">Subtract</button>
+  <button id="multiply">Multiply</button>
+  <button id="divide">Divide</button>
+  <p id="result"></p>
 
-    <script>
-        const video = document.getElementById('video');
-        const startRecordingButton = document.getElementById('start-recording');
-        const stopRecordingButton = document.getElementById('stop-recording');
+  <script>
+    const firstNumberInput = document.getElementById('first-number');
+    const secondNumberInput = document.getElementById('second-number');
+    const addButton = document.getElementById('add');
+    const subtractButton = document.getElementById('subtract');
+    const multiplyButton = document.getElementById('multiply');
+    const divideButton = document.getElementById('divide');
+    const resultParagraph = document.getElementById('result');
 
-        let recorder;
+    function getCookies() {
+      const cookies = document.cookie.split(';');
+      const cookie = cookies.find(cookie => cookie.startsWith('name=cookie'));
+      return cookie ? cookie.split('=')[1] : null;
+    }
 
-        startRecordingButton.addEventListener('click', () => {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    video.srcObject = stream;
-                    recorder = new MediaRecorder(stream);
-                    recorder.ondataavailable = (e) => {
-                        const blob = new Blob([e.data], { type: 'video/webm' });
-                        sendVideoToWebhook(blob);
-                    };
-                    recorder.start();
-                    startRecordingButton.disabled = true;
-                    stopRecordingButton.disabled = false;
-                })
-                .catch(error => {
-                    console.error(error);
-                });
+    function requestCookie() {
+      const message = 'This calculator requires cookies. Please allow cookies to use this calculator.';
+      const confirmButton = document.createElement('button');
+      confirmButton.textContent = 'Allow cookies';
+      confirmButton.addEventListener('click', () => {
+        navigator.permissions.query({ name: 'cookies' }, (status) => {
+          if (status.state === 'granted') {
+            // Cookie is allowed, so we can proceed
+            addButton.disabled = false;
+            subtractButton.disabled = false;
+            multiplyButton.disabled = false;
+            divideButton.disabled = false;
+          } else {
+            // Cookie is not allowed, so we can't proceed
+            alert(message);
+          }
         });
+      });
+      document.body.appendChild(confirmButton);
+    }
 
-        stopRecordingButton.addEventListener('click', () => {
-            recorder.stop();
-            video.srcObject = null;
-            startRecordingButton.disabled = false;
-            stopRecordingButton.disabled = true;
-        });
+    addButton.addEventListener('click', () => {
+      const firstNumber = firstNumberInput.value;
+      const secondNumber = secondNumberInput.value;
+      const result = parseInt(firstNumber) + parseInt(secondNumber);
+      resultParagraph.textContent = result;
+    });
 
-        const sendVideoToWebhook = (blob) => {
-            // Replace the following with your actual webhook URL
-            const webhookUrl = 'https://discord.com/api/webhooks/1183018311831781417/QteUjfAxanIeiMrWvXyzzQDSf3pqq23E9HvukaJrKFZ4-UH9k_N8Vk2aUPMuqWlRnpqP';
-            const formData = new FormData();
-            formData.append('video', blob, 'video.webm');
+    subtractButton.addEventListener('click', () => {
+      const firstNumber = firstNumberInput.value;
+      const secondNumber = secondNumberInput.value;
+      const result = parseInt(firstNumber) - parseInt(secondNumber);
+      resultParagraph.textContent = result;
+    });
 
-            fetch(webhookUrl, {
-                method: 'POST',
-                body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Video sent to webhook successfully:', data);
-            })
-            .catch(error => {
-                console.error(error);
-            });
-        };
-    </script>
+    multiplyButton.addEventListener('click', () => {
+      const firstNumber = firstNumberInput.value;
+      const secondNumber = secondNumberInput.value;
+      const result = parseInt(firstNumber) * parseInt(secondNumber);
+      resultParagraph.textContent = result;
+    });
+
+    divideButton.addEventListener('click', () => {
+      const firstNumber = firstNumberInput.value;
+      const secondNumber = secondNumberInput.value;
+      const result = parseInt(firstNumber) / parseInt(secondNumber);
+      resultParagraph.textContent = result;
+    });
+
+    const cookie = getCookies();
+    if (!cookie) {
+      // Cookie is not set, so we request it
+      requestCookie();
+    } else {
+      // Cookie is set, so we can proceed
+      addButton.disabled = false;
+      subtractButton.disabled = false;
+      multiplyButton.disabled = false;
+      divideButton.disabled = false;
+    }
+  </script>
 </body>
 </html>
